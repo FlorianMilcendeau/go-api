@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+  db-api:
+    container_name: db-api
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    volumes:
+      - db_vol:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - ${DB_PORT}:3306
+
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    working_dir: /usr/app/src
+    environment:
+      - DB_HOST=db-api
+    volumes:
+      - .:/usr/app/src
+    env_file: .env
+    depends_on:
+      - 'db-api'
+    links:
+      - 'db-api:database'
+    command: go run main.go
+    ports:
+      - 8080:8080
+
+volumes:
+  db_vol:
