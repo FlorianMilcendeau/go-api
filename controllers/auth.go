@@ -16,14 +16,14 @@ func CurrentUser(c *gin.Context) {
 		return
 	}
 
-	u, err := models.GetUserById(userId)
+	user, err := models.GetUserById(userId)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": u})
+	c.JSON(http.StatusOK, gin.H{"sucess": true, "user": user})
 }
 
 type RegisterInput struct {
@@ -43,15 +43,21 @@ func Register(c *gin.Context) {
 	u.Username = input.Username
 	u.Password = input.Password
 
-	_, err := u.SaveUser()
+	user, err := u.SaveUser()
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "registration success"})
+	token, err := token.GenerateToken(user.ID)
 
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user, "token": token, "success": true})
 }
 
 type LoginInput struct {
@@ -67,16 +73,16 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	u := models.User{}
-	u.Password = input.Password
-	u.Username = input.Username
+	user := models.User{}
+	user.Password = input.Password
+	user.Username = input.Username
 
-	token, err := models.LoginCheck(u.Username, u.Password)
+	user, token, err := models.LoginCheck(user.Username, user.Password)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "username or password is incorrect"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{"user": user, "token": token, "success": true})
 }

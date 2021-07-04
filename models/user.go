@@ -20,31 +20,6 @@ func VerifyPassword(password, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func LoginCheck(username string, password string) (string, error) {
-	var err error
-
-	u := User{}
-
-	err = DB.Model(User{}).Where("username = ?", username).Take(&u).Error
-
-	if err != nil {
-		return "", nil
-	}
-
-	err = VerifyPassword(password, u.Password)
-
-	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		return "", nil
-	}
-
-	token, err := token.GenerateToken(u.ID)
-
-	if err != nil {
-		return "", err
-	}
-	return token, nil
-}
-
 func (u *User) SaveUser() (*User, error) {
 
 	var err error
@@ -69,8 +44,8 @@ func (u *User) BeforeSave() error {
 	return nil
 }
 
-func (u *User) PrepareGive() {
-	u.Password = ""
+func (user *User) PrepareGive() {
+	user.Password = ""
 }
 
 func GetUserById(userId uint) (User, error) {
@@ -83,4 +58,43 @@ func GetUserById(userId uint) (User, error) {
 	user.PrepareGive()
 
 	return user, nil
+}
+
+func GetUserByName(username string) (User, error) {
+	var user User
+
+	err := DB.Model(User{}).Where("username = ?", username).Take(&user).Error
+
+	if err != nil {
+		return User{}, err
+	}
+
+	user.PrepareGive()
+
+	return user, nil
+}
+
+func LoginCheck(username string, password string) (User, string, error) {
+	var err error
+
+	user := User{}
+
+	user, err = GetUserByName(username)
+
+	if err != nil {
+		return User{}, "", nil
+	}
+
+	err = VerifyPassword(password, user.Password)
+
+	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
+		return User{}, "", nil
+	}
+
+	token, err := token.GenerateToken(user.ID)
+
+	if err != nil {
+		return User{}, "", err
+	}
+	return user, token, nil
 }
